@@ -1,0 +1,9 @@
+imgresize:False
+imgresize_x:0.250
+imgresize_y:0.250
+featureMethod:surf
+searchRatio:0.750
+offsetCaculate:众数
+offsetEvaluate:3
+direction:列拼接
+method:增量
