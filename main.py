@@ -11,6 +11,7 @@ import cv2
 import time
 import glob
 import os
+import numpy as np
 from myconfig import *
 
 class Stitch(Stitcher):
@@ -39,12 +40,14 @@ class Stitch(Stitcher):
         for fileIndex in range(0, fileNum - 1):
             # newForm.setVal()
             thread.sig_s.emit()
-            print(fileIndex)
+            # print(fileIndex)
             self.msg = fileIndex
             self.printAndWrite("stitching " + str(fileList[fileIndex]) + " and " + str(fileList[fileIndex + 1]))
 
-            imageA = cv2.imread(fileList[fileIndex], 0)
-            imageB = cv2.imread(fileList[fileIndex + 1], 0)
+            # imageA = cv2.imread(fileList[fileIndex], 0)
+            # imageB = cv2.imread(fileList[fileIndex + 1], 0)
+            imageA = cv2.imdecode(np.fromfile(fileList[fileIndex],dtype=np.uint8),cv2.IMREAD_GRAYSCALE)
+            imageB = cv2.imdecode(np.fromfile(fileList[fileIndex+1],dtype=np.uint8),cv2.IMREAD_GRAYSCALE)
 
             # if caculateOffsetMethod == self.calculateOffsetForPhaseCorrleate:
             #     (status, offset) = self.calculateOffsetForPhaseCorrleate(
@@ -69,7 +72,8 @@ class Stitch(Stitcher):
         startTime = time.time()
         dxSum = 0
         dySum = 0
-        stitchImage = cv2.imread(fileList[0], 0)
+        #stitchImage = cv2.imread(fileList[0], 0)
+        stitchImage = cv2.imdecode(np.fromfile(fileList[0],dtype=np.uint8),cv2.IMREAD_GRAYSCALE)
         offsetListNum = len(offsetList)
 
         for fileIndex in range(0, offsetListNum):
@@ -77,7 +81,8 @@ class Stitch(Stitcher):
             # newForm.addLog(str1)
             thread.sig_l.emit(str1)
             self.printAndWrite("  stitching " + str(fileList[fileIndex + 1]))
-            imageB = cv2.imread(fileList[fileIndex + 1], 0)
+            # imageB = cv2.imread(fileList[fileIndex + 1], 0)
+            imageB =cv2.imdecode(np.fromfile(fileList[fileIndex + 1], dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
             dxSum = offsetList[fileIndex][0] + dxSum
             dySum = offsetList[fileIndex][1] + dySum
             offset = [dxSum, dySum]
@@ -128,7 +133,8 @@ class Stitch(Stitcher):
             fileNum = len(fileList)
             for j in range(0, fileNum):
                 Name = fileList[j].split("\\")[-1]
-                img = cv2.imread(fileList[j], 0)
+                #img = cv2.imread(fileList[j], 0)
+                img=cv2.imdecode(np.fromfile(fileList[j],dtype=np.uint8),cv2.IMREAD_GRAYSCALE)
                 imgResized = self.resize(img, imgresize_x, imgresize_y)
                 cv2.imwrite("./cache/" + Name, imgResized)
             projectAddress = "./cache"
@@ -249,7 +255,7 @@ class DialogWindow(QDialog,Ui_Dialog):
         form.show()
     def setStart(self,fileNum):
         # 初始化
-        print(fileNum)
+        # print(fileNum)
         self.bt_backMainWindow.setEnabled(False)
         self.bt_openResult.setEnabled(False)
         self.progressBar.setMaximum(fileNum)
@@ -386,7 +392,8 @@ class MainWindow(QMainWindow,Ui_MainWindow ):
         start=False
         # 将文件名显示在文件列表框里
         if os.path.exists(self.projectAddress):
-            self.outputAddress=os.path.abspath(os.path.dirname(self.projectAddress))
+            # self.outputAddress=os.path.abspath(os.path.dirname(self.projectAddress))
+            self.outputAddress = os.path.abspath(self.projectAddress)
             self.lineEdit_output.setText(self.outputAddress)
             self.fileName=self.projectAddress.split("/")[-1]+"-pin"
             self.lineEdit_fileName.setText(self.fileName)
@@ -397,7 +404,7 @@ class MainWindow(QMainWindow,Ui_MainWindow ):
                     start=True
                     self.fileExtension=fn.split(".")[-1]
             self.bt_startStitch.setEnabled(start)
-            print(self.fileNum)
+            # print(self.fileNum)
         else:
             self.lineEdit_output.clear()
             self.lineEdit_fileName.clear()
