@@ -119,7 +119,8 @@ class Stitcher(Utility.Method):
             if startNum == totalNum:
                 break
             if startNum == (totalNum - 1):
-                result.append(cv2.imread(fileList[startNum], 0))
+                # result.append(cv2.imread(fileList[startNum], 0))
+                result.append(cv2.imdecode(np.fromfile(fileList[startNum],dtype=np.uint8),cv2.IMREAD_GRAYSCALE))
                 break
             self.printAndWrite("stitching Break, start from " + str(fileList[startNum]) + " again")
         return result

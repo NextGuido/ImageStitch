@@ -148,12 +148,18 @@ class Stitch(Stitcher):
         result = self.flowStitchWithMutiple(fileList, caculateOffsetMethod)
         self.tempImageFeature.isBreak = True
         if len(result) == 1:
-            cv2.imwrite(outputAddress + "/" + fileName + "." + outputfileExtension, result[0])
+            # cv2.imwrite(outputAddress + "/" + fileName + "." + outputfileExtension, result[0])
+            cv2.imencode("."+outputfileExtension, result[0])[1].tofile(outputAddress + "/" + fileName + "."+outputfileExtension)
         else:
             for j in range(0, len(result)):
-                cv2.imwrite(
-                    outputAddress + "/" + fileName + "_" + str(j + 1) + "." + outputfileExtension,
-                    result[j])
+                # cv2.imwrite(
+                #     (outputAddress + "/" + fileName + "_" + str(j + 1) + "." + outputfileExtension,
+                #     result[j]))
+
+                name=fileName + "_" + str(j + 1) + "." + outputfileExtension
+                path=os.path.join(outputAddress,name)
+                print(path)
+                cv2.imencode('.'+outputfileExtension, result[j])[1].tofile(path)
 
 
 class stitcherThread(QThread):
