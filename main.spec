@@ -4,9 +4,9 @@ block_cipher = None
 
 
 a = Analysis(['main.py'],
-             pathex=['D:\\python\\V1.4'],
+             pathex=['D:\\coding\\ImageStitch'],
              binaries=[],
-             datas=[],
+             datas=[('icon','icon'),('config','config')],
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
@@ -19,7 +19,7 @@ pyz = PYZ(a.pure, a.zipped_data,
 exe = EXE(pyz,
           a.scripts,
           exclude_binaries=True,
-          name='main',
+          name='ImageStitch',
           debug=False,
           strip=False,
           upx=True,
@@ -30,4 +30,4 @@ coll = COLLECT(exe,
                a.datas,
                strip=False,
                upx=True,
-               name='main')
+               name='ImageStitch')
