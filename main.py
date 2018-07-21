@@ -161,7 +161,6 @@ class Stitch(Stitcher):
                 print(path)
                 cv2.imencode('.'+outputfileExtension, result[j])[1].tofile(path)
 
-
 class stitcherThread(QThread):
     # 图像拼接线程
     projectAddress = "./images"
@@ -209,29 +208,29 @@ class stitcherThread(QThread):
                                     fileExtension=self.fileExtension, outputfileExtension=self.outputfileExtension)
         self.sig_e.emit()
 
-class LoginWindow(QDialog,Ui_Login):
-    # 登录界面
-    superPassword = "afish1001"
-    def __init__(self,parent=None):
-        super(QDialog,self).__init__(parent)
-        self.setupUi(self)
-        reg = QRegExp("[a-zA-Z0-9_]+$")
-        pValidator = QRegExpValidator()
-        pValidator.setRegExp(reg)
-        self.lineEdit_password.setValidator(pValidator)
-        self.lineEdit_password.setEchoMode(QLineEdit.Password)
-        self.bt_yes.clicked.connect(self.login)
-        self.setWindowIcon(QIcon('./icon/beike.png'))
-    def login(self):
-        con=myconfig()
-        text=self.lineEdit_password.text()
-        if text == self.superPassword or con.matchPassword(text):
-            self.lineEdit_password.clear()
-            self.close()
-            form.show()
-        else:
-            self.lineEdit_password.clear()
-            warning = QMessageBox.warning(self, "错误！", "密码错误，请重新输入！")
+# class LoginWindow(QDialog,Ui_Login):
+#     # 登录界面
+#     superPassword = "afish1001"
+#     def __init__(self,parent=None):
+#         super(QDialog,self).__init__(parent)
+#         self.setupUi(self)
+#         reg = QRegExp("[a-zA-Z0-9_]+$")
+#         pValidator = QRegExpValidator()
+#         pValidator.setRegExp(reg)
+#         self.lineEdit_password.setValidator(pValidator)
+#         self.lineEdit_password.setEchoMode(QLineEdit.Password)
+#         self.bt_yes.clicked.connect(self.login)
+#         self.setWindowIcon(QIcon('./icon/beike.png'))
+#     def login(self):
+#         con=myconfig()
+#         text=self.lineEdit_password.text()
+#         if text == self.superPassword or con.matchPassword(text):
+#             self.lineEdit_password.clear()
+#             self.close()
+#             form.show()
+#         else:
+#             self.lineEdit_password.clear()
+#             warning = QMessageBox.warning(self, "错误！", "密码错误，请重新输入！")
 
 class DialogWindow(QDialog,Ui_Dialog):
     # 拼接过程展示界面
@@ -287,7 +286,6 @@ class DialogWindow(QDialog,Ui_Dialog):
         # 输出拼接结果
         self.list_result.addItem(str)
 
-
 class MainWindow(QMainWindow,Ui_MainWindow ):
     projectAddress = "./images"
     outputAddress = "./result"
@@ -338,9 +336,9 @@ class MainWindow(QMainWindow,Ui_MainWindow ):
         self.start()
         self.setWindowIcon(QIcon('./icon/beike.png'))
 
-        self.action_logout.triggered.connect(self.logout)
-        self.action_resetPassword.triggered.connect(self.resetPassword)
-        self.action_removePassword.triggered.connect(self.removePassword)
+        # self.action_logout.triggered.connect(self.logout)
+        # self.action_resetPassword.triggered.connect(self.resetPassword)
+        # self.action_removePassword.triggered.connect(self.removePassword)
         self.groupBox_setting.setEnabled(False)
         self.bt_editMode.setEnabled(False)
 
@@ -351,43 +349,43 @@ class MainWindow(QMainWindow,Ui_MainWindow ):
         self.cbBox_mode.addItem("默认")
         if not os.path.exists("./config"):
             os.makedirs("./config")
-        if not os.path.exists("./user.ini"):
-            f=open("./user.ini","w")
-            f.close()
+        # if not os.path.exists("./user.ini"):
+        #     f=open("./user.ini","w")
+        #     f.close()
         for fn in os.listdir("./config/"):
             self.cbBox_mode.addItem(fn)
 
         self.modeSet()
-    def logout(self):
-        # 退出登录
-        self.close()
-        loginForm.show()
-    def resetPassword(self):
-        # 重置密码
-        con = myconfig()
-        qd = QInputDialog()
-
-        text, ok = qd.getText(self, "请输入密码", "请输入原密码：")
-        if ok:
-            if text == self.superPassword or con.matchPassword(text):
-                text, ok = qd.getText(self, "请输入密码", "请输入新密码：")
-                if ok:
-                    con.setPassword(text)
-            else:
-                warning = QMessageBox.warning(self, "错误！", "密码错误，请重新输入！")
-                self.resetPassword()
-    def removePassword(self):
-        # 删除密码
-        con = myconfig()
-        qd = QInputDialog()
-
-        text, ok = qd.getText(self, "请输入密码", "请输入密码：")
-        if ok:
-            if text == self.superPassword or con.matchPassword(text):
-                con.delPassword()
-            else:
-                warning = QMessageBox.warning(self, "错误！", "密码错误，请重新输入！")
-                self.removePassword()
+    # def logout(self):
+    #     # 退出登录
+    #     self.close()
+    #     loginForm.show()
+    # def resetPassword(self):
+    #     # 重置密码
+    #     con = myconfig()
+    #     qd = QInputDialog()
+    #
+    #     text, ok = qd.getText(self, "请输入密码", "请输入原密码：")
+    #     if ok:
+    #         if text == self.superPassword or con.matchPassword(text):
+    #             text, ok = qd.getText(self, "请输入密码", "请输入新密码：")
+    #             if ok:
+    #                 con.setPassword(text)
+    #         else:
+    #             warning = QMessageBox.warning(self, "错误！", "密码错误，请重新输入！")
+    #             self.resetPassword()
+    # def removePassword(self):
+    #     # 删除密码
+    #     con = myconfig()
+    #     qd = QInputDialog()
+    #
+    #     text, ok = qd.getText(self, "请输入密码", "请输入密码：")
+    #     if ok:
+    #         if text == self.superPassword or con.matchPassword(text):
+    #             con.delPassword()
+    #         else:
+    #             warning = QMessageBox.warning(self, "错误！", "密码错误，请重新输入！")
+    #             self.removePassword()
     def input(self):
         # 选择输入图像文件夹
         self.fileNum=0
@@ -637,13 +635,15 @@ class MainWindow(QMainWindow,Ui_MainWindow ):
             os.startfile(self.outputAddress)
         else:
             warning = QMessageBox.warning(self, "错误！", "打开失败！")
+
 if __name__ == "__main__":
     app=QApplication (sys.argv )
     app.setWindowIcon(QIcon('./icon/beike.png'))
     thread = stitcherThread()
     form = MainWindow()
-    loginForm=LoginWindow()
-    loginForm.show()
+    # loginForm=LoginWindow()
+    # loginForm.show()
+    form.show()
     newForm = DialogWindow()
     sys.exit(app.exec_())
 

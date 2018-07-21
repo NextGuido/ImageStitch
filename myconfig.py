@@ -50,21 +50,21 @@ class myconfig():
         # 删除配置文件
         f="./config/"+fileName
         os.remove(f)
-    def setPassword(self,password):
-        #设置密码并加密
-        f=open("./user.ini",'w')
-        h=hashlib.md5()
-        h.update(password.encode(encoding='utf-8'))
-        f.write(h.hexdigest())
-    def matchPassword(self,password):
-        #密码验证
-        f = open("./user.ini", 'r')
-        h = hashlib.md5()
-        h.update(password.encode(encoding='utf-8'))
-        if h.hexdigest()==f.read():
-            return True
-        else:
-            return False
-    def delPassword(self):
-        f=open("./user.ini",'w')
-        f.write("")
+    # def setPassword(self,password):
+    #     #设置密码并加密
+    #     f=open("./user.ini",'w')
+    #     h=hashlib.md5()
+    #     h.update(password.encode(encoding='utf-8'))
+    #     f.write(h.hexdigest())
+    # def matchPassword(self,password):
+    #     #密码验证
+    #     f = open("./user.ini", 'r')
+    #     h = hashlib.md5()
+    #     h.update(password.encode(encoding='utf-8'))
+    #     if h.hexdigest()==f.read():
+    #         return True
+    #     else:
+    #         return False
+    # def delPassword(self):
+    #     f=open("./user.ini",'w')
+    #     f.write("")
