@@ -15,7 +15,7 @@ class Ui_Dialog(object):
         Dialog.setMinimumSize(QtCore.QSize(807, 560))
         Dialog.setMaximumSize(QtCore.QSize(807, 560))
         self.bt_backMainWindow = QtWidgets.QPushButton(Dialog)
-        self.bt_backMainWindow.setGeometry(QtCore.QRect(622, 70, 81, 28))
+        self.bt_backMainWindow.setGeometry(QtCore.QRect(700, 70, 81, 28))
         self.bt_backMainWindow.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.bt_backMainWindow.setObjectName("bt_backMainWindow")
         self.progressBar = QtWidgets.QProgressBar(Dialog)
@@ -49,6 +49,10 @@ class Ui_Dialog(object):
         self.bt_openResult.setGeometry(QtCore.QRect(540, 70, 71, 28))
         self.bt_openResult.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.bt_openResult.setObjectName("bt_openResult")
+        self.bt_manualAct = QtWidgets.QPushButton(Dialog)
+        self.bt_manualAct.setGeometry(QtCore.QRect(622, 70, 71, 28))
+        self.bt_manualAct.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.bt_manualAct.setObjectName("bt_manualAct")
 
         self.retranslateUi(Dialog)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
@@ -62,4 +66,5 @@ class Ui_Dialog(object):
         self.label_2.setText(_translate("Dialog", "拼接结论："))
         self.label_3.setText(_translate("Dialog", "日志："))
         self.bt_openResult.setText(_translate("Dialog", "打开结果"))
+        self.bt_manualAct.setText(_translate("Dialog", "手动微调"))
 

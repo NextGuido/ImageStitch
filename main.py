@@ -12,6 +12,7 @@ import time
 import glob
 import os
 import numpy as np
+from manual import ManualForm
 from myconfig import *
 
 class Stitch(Stitcher):
@@ -75,7 +76,7 @@ class Stitch(Stitcher):
         #stitchImage = cv2.imread(fileList[0], 0)
         stitchImage = cv2.imdecode(np.fromfile(fileList[0],dtype=np.uint8),cv2.IMREAD_GRAYSCALE)
         offsetListNum = len(offsetList)
-
+        thread.sig_m.emit((str(fileList[0]), 0,0))
         for fileIndex in range(0, offsetListNum):
             str1="  stitching " + str(fileList[fileIndex + 1])
             # newForm.addLog(str1)
@@ -98,7 +99,7 @@ class Stitch(Stitcher):
             self.printAndWrite("  The dxSum is " + str(dxSum) + " and the dySum is " + str(dySum))
             (stitchImage, fuseRegion, roiImageRegionA, roiImageRegionB) = self.getStitchByOffset(
                 [stitchImage, imageB], offset)
-
+            thread.sig_m.emit((str(fileList[fileIndex + 1]),offsetList[fileIndex][1],offsetList[fileIndex][0]))
             if dxSum < 0:
                 dxSum = 0
             if dySum < 0:
@@ -123,12 +124,12 @@ class Stitch(Stitcher):
         # 进行拼接变为对单个目录下的图像进行拼接
 
         # 以下代码为将图像进行缩放并放入cache目录下，将cache作为输入进行拼接
+        if not os.path.exists("./cache"):
+            os.makedirs("./cache")
+        for i in os.listdir("./cache"):
+            path_file = os.path.join("./cache", i)
+            os.remove(path_file)
         if imgresize:
-            if not os.path.exists("./cache"):
-                os.makedirs("./cache")
-            for i in os.listdir("./cache"):
-                path_file = os.path.join("./cache", i)
-                os.remove(path_file)
             fileList = glob.glob(projectAddress + "\\" + "*." + fileExtension)
             fileNum = len(fileList)
             for j in range(0, fileNum):
@@ -149,17 +150,20 @@ class Stitch(Stitcher):
         self.tempImageFeature.isBreak = True
         if len(result) == 1:
             # cv2.imwrite(outputAddress + "/" + fileName + "." + outputfileExtension, result[0])
-            cv2.imencode("."+outputfileExtension, result[0])[1].tofile(outputAddress + "/" + fileName + "."+outputfileExtension)
+            name=fileName + "."+outputfileExtension
+            cv2.imencode("."+outputfileExtension, result[0])[1].tofile(outputAddress + "/" + name)
         else:
             for j in range(0, len(result)):
                 # cv2.imwrite(
                 #     (outputAddress + "/" + fileName + "_" + str(j + 1) + "." + outputfileExtension,
                 #     result[j]))
-
                 name=fileName + "_" + str(j + 1) + "." + outputfileExtension
                 path=os.path.join(outputAddress,name)
+                # #放在cache目录下
+                # path = os.path.join('./cache', name)
                 print(path)
                 cv2.imencode('.'+outputfileExtension, result[j])[1].tofile(path)
+            thread.sig_a.emit()
 
 class stitcherThread(QThread):
     # 图像拼接线程
@@ -177,6 +181,9 @@ class stitcherThread(QThread):
     sig_l=pyqtSignal(str)
     sig_r=pyqtSignal(str)
     sig_e=pyqtSignal()
+    #for manualAct
+    sig_m=pyqtSignal(tuple)
+    sig_a = pyqtSignal()
     def __init__(self):
         super(QThread,self).__init__()
 
@@ -242,20 +249,28 @@ class DialogWindow(QDialog,Ui_Dialog):
         self.bt_backMainWindow.clicked.connect(self.back)
         self.bt_openResult.setEnabled(False)
         self.bt_backMainWindow.setEnabled(False)
+        self.bt_manualAct.clicked.connect(self.startManualAct)
         self.bt_openResult.clicked.connect(form.printResult)
         self.setWindowIcon(QIcon('./icon/beike.png'))
         thread.sig_s.connect(self.setVal)
         thread.sig_l.connect(self.addLog)
         thread.sig_r.connect(self.setStitcherResult)
         thread.sig_e.connect(self.setEnd)
+        thread.sig_m.connect(self.getManualFiles)
+        thread.sig_a.connect(self.startManualAct)
+    def getManualFiles(self,fileinfo):
+        self.fileList.append(fileinfo)
+    def startManualAct(self):
+        if self.fileList:
+            manualActForm.addImages(self.fileList)
+            manualActForm.show()
     def back(self):
         # 将界面初始化并返回主界面
         self.list_stitcherlog.clear()
         self.list_result.clear()
         self.progressBar.setValue(0)
+        self.fileList.clear()
         thread.quit()
-
-
         self.close()
         form.show()
     def setStart(self,fileNum):
@@ -263,6 +278,7 @@ class DialogWindow(QDialog,Ui_Dialog):
         # print(fileNum)
         self.bt_backMainWindow.setEnabled(False)
         self.bt_openResult.setEnabled(False)
+        self.bt_manualAct.setEnabled(False)
         self.progressBar.setMaximum(fileNum)
         self.progressBar.setValue(0)
         self.val=0
@@ -279,6 +295,7 @@ class DialogWindow(QDialog,Ui_Dialog):
         self.lb_stitchInf.setText("拼接完成！")
         self.bt_openResult.setEnabled(True)
         self.bt_backMainWindow.setEnabled(True)
+        self.bt_manualAct.setEnabled(True)
     def addLog(self,str):
         # 输出日志
         self.list_stitcherlog.addItem(str)
@@ -298,6 +315,7 @@ class MainWindow(QMainWindow,Ui_MainWindow ):
     fileExtension = "jpg"
     outputfileExtension="jpg"
     superPassword="afish1001"
+    manualForms=[]
     def __init__(self,parent=None ):
         super (MainWindow ,self ).__init__(parent )
         self .setupUi(self)
@@ -339,6 +357,7 @@ class MainWindow(QMainWindow,Ui_MainWindow ):
         # self.action_logout.triggered.connect(self.logout)
         # self.action_resetPassword.triggered.connect(self.resetPassword)
         # self.action_removePassword.triggered.connect(self.removePassword)
+        self.action_manual.triggered.connect(self.manualAct)
         self.groupBox_setting.setEnabled(False)
         self.bt_editMode.setEnabled(False)
 
@@ -356,6 +375,15 @@ class MainWindow(QMainWindow,Ui_MainWindow ):
             self.cbBox_mode.addItem(fn)
 
         self.modeSet()
+    def manualAct(self):
+        manualForm=ManualForm(self.projectAddress)
+        self.manualForms.append(manualForm)
+        # files=[]
+        # for i in range(self.fileNum):
+        #     files.append(os.path.join(self.projectAddress,self.list_input.item(i).text()))
+        #     print(os.path.join(self.projectAddress,self.list_input.item(i).text()))
+        # manualForm.addImages(files)
+        manualForm.show()
     # def logout(self):
     #     # 退出登录
     #     self.close()
@@ -415,7 +443,7 @@ class MainWindow(QMainWindow,Ui_MainWindow ):
             self.bt_startStitch.setEnabled(False)
     def isImage(self,file):
         # 判定文件是否为图像
-        image=["jpg","jpeg","bmp","tif","tiff","png"]
+        image=["jpg","Jpg","jpeg","bmp","tif","tiff","png"]
         fileExtension=file.split(".")[-1]
         if fileExtension in image :
             return True
@@ -645,5 +673,6 @@ if __name__ == "__main__":
     # loginForm.show()
     form.show()
     newForm = DialogWindow()
+    manualActForm=ManualForm()
     sys.exit(app.exec_())
 

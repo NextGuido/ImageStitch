@@ -7,3 +7,6 @@ result/
 __pycache__/
 cache/
 resultevaluate.txt
+build/
+dist/
+manualAct.py
