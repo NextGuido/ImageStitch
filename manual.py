@@ -112,13 +112,13 @@ class ManualForm(QMainWindow):
         dirLabel=QLabel('默认新图片顺序：')
         dirLabel.setToolTip('新添加图片相对原始项目的方位')
         directionMenu = newWidgetAction(self, self.directionOps)
-        add=action('Add',self.addFile,icon='add',tip='添加图片')
-        delete=action('Delete',self.delete,'delete',icon='delete',tip='删除图片')
+        add=action('打开',self.addFile,icon='add',tip='添加图片')
+        delete=action('删除',self.delete,'delete',icon='delete',tip='删除图片')
         upper = action('上移一层', self.layerUpper)
         lower = action('下移一层', self.layerLower)
         top = action('置于顶层', self.layerTop)
         bottom = action('置于底层', self.layerBottom)
-        self.save = action('Save', self.saveFile, 'Ctrl+S', 'save', '保存项目')
+        self.save = action('保存', self.saveFile, 'Ctrl+S', 'save', '保存项目')
         self.full = action("全屏", self.fullScreen, icon='fullScreen')
         self.normal = action('退出全屏', self.fullScreen, 'esc', icon='quit')
         self.tools=self.toolbar('Tools',[add,None,delete,None,self.save,None,upper,None,lower,None,top,None,bottom,None,self.full])
@@ -134,8 +134,8 @@ class ManualForm(QMainWindow):
         # signal-slot
         self.directionOps.currentIndexChanged.connect(self.dirChanged)
 
-        self.setWindowTitle('ImageStitch')
-        self.setWindowIcon(newIcon('beike'))
+        self.setWindowTitle('材料显微图像拼接软件')
+        self.setWindowIcon(newIcon('icon'))
     def dirChanged(self,s):
         self.dir=self.dirs[str(s)]
     def screenSize(self):

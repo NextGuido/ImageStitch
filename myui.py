@@ -325,7 +325,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "北科大材料显微图像拼接软件"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "材料显微图像拼接软件"))
         self.bt_input.setText(_translate("MainWindow", "导入"))
         self.lb_input.setText(_translate("MainWindow", "图像集："))
         self.lb_output.setText(_translate("MainWindow", "结果导出地址："))

@@ -123,21 +123,23 @@ class Stitch(Stitcher):
         # 对图像拼接进行了较大改动，首先加入了图像缩放的变量和相应代码，然后修改部分代码使拼接功能由对多个文件夹
         # 进行拼接变为对单个目录下的图像进行拼接
 
-        # 以下代码为将图像进行缩放并放入cache目录下，将cache作为输入进行拼接
-        if not os.path.exists("./cache"):
-            os.makedirs("./cache")
-        for i in os.listdir("./cache"):
-            path_file = os.path.join("./cache", i)
-            os.remove(path_file)
         if imgresize:
+            # 以下代码为将图像进行缩放并放入cache目录下，将cache作为输入进行拼接
+            if not os.path.exists("./cache"):
+                os.makedirs("./cache")
+            for i in os.listdir("./cache"):
+                path_file = os.path.join("./cache", i)
+                os.remove(path_file)
             fileList = glob.glob(projectAddress + "\\" + "*." + fileExtension)
             fileNum = len(fileList)
             for j in range(0, fileNum):
                 Name = fileList[j].split("\\")[-1]
+                tmpfileExtension=Name.split('.')[-1]
                 #img = cv2.imread(fileList[j], 0)
                 img=cv2.imdecode(np.fromfile(fileList[j],dtype=np.uint8),cv2.IMREAD_GRAYSCALE)
                 imgResized = self.resize(img, imgresize_x, imgresize_y)
-                cv2.imwrite("./cache/" + Name, imgResized)
+                # cv2.imwrite("./cache/" + Name, imgResized)
+                cv2.imencode("." + tmpfileExtension, imgResized)[1].tofile("./cache/" + Name)
             projectAddress = "./cache"
         fileAddress = projectAddress + "/"
 
@@ -350,9 +352,9 @@ class MainWindow(QMainWindow,Ui_MainWindow ):
         self.bt_del.clicked.connect(self.delMode)
         self.list_input.itemClicked.connect(self.inputPic)
         self.list_input.setAlternatingRowColors(True)
-        self.lb_icon  .setPixmap(QPixmap ("./icon/beike.png"))
+        self.lb_icon  .setPixmap(QPixmap ("./icon/icon.png"))
         self.start()
-        self.setWindowIcon(QIcon('./icon/beike.png'))
+        self.setWindowIcon(QIcon('./icon/icon.png'))
 
         # self.action_logout.triggered.connect(self.logout)
         # self.action_resetPassword.triggered.connect(self.resetPassword)
@@ -666,7 +668,7 @@ class MainWindow(QMainWindow,Ui_MainWindow ):
 
 if __name__ == "__main__":
     app=QApplication (sys.argv )
-    app.setWindowIcon(QIcon('./icon/beike.png'))
+    app.setWindowIcon(QIcon('./icon/icon.png'))
     thread = stitcherThread()
     form = MainWindow()
     # loginForm=LoginWindow()
