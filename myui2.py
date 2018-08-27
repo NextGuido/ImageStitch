@@ -59,7 +59,7 @@ class Ui_Dialog(object):
 
     def retranslateUi(self, Dialog):
         _translate = QtCore.QCoreApplication.translate
-        Dialog.setWindowTitle(_translate("Dialog", "北科大材料显微图像拼接软件"))
+        Dialog.setWindowTitle(_translate("Dialog", "材料显微图像拼接软件"))
         self.bt_backMainWindow.setText(_translate("Dialog", "返回"))
         self.label.setText(_translate("Dialog", "拼接进度："))
         self.lb_stitchInf.setText(_translate("Dialog", "拼接进度"))
