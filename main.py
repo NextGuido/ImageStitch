@@ -229,7 +229,7 @@ class stitcherThread(QThread):
 #         self.lineEdit_password.setValidator(pValidator)
 #         self.lineEdit_password.setEchoMode(QLineEdit.Password)
 #         self.bt_yes.clicked.connect(self.login)
-#         self.setWindowIcon(QIcon('./icon/beike.png'))
+#         self.setWindowIcon(QIcon('./icon/icon.png'))
 #     def login(self):
 #         con=myconfig()
 #         text=self.lineEdit_password.text()
@@ -253,7 +253,7 @@ class DialogWindow(QDialog,Ui_Dialog):
         self.bt_backMainWindow.setEnabled(False)
         self.bt_manualAct.clicked.connect(self.startManualAct)
         self.bt_openResult.clicked.connect(form.printResult)
-        self.setWindowIcon(QIcon('./icon/beike.png'))
+        self.setWindowIcon(QIcon('./icon/icon.png'))
         thread.sig_s.connect(self.setVal)
         thread.sig_l.connect(self.addLog)
         thread.sig_r.connect(self.setStitcherResult)
@@ -352,7 +352,7 @@ class MainWindow(QMainWindow,Ui_MainWindow ):
         self.bt_del.clicked.connect(self.delMode)
         self.list_input.itemClicked.connect(self.inputPic)
         self.list_input.setAlternatingRowColors(True)
-        self.lb_icon  .setPixmap(QPixmap ("./icon/icon.png"))
+        self.lb_icon  .setPixmap(QPixmap ("./icon/icon.png").scaledToHeight(119))
         self.start()
         self.setWindowIcon(QIcon('./icon/icon.png'))
 
