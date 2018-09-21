@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['main.py'],
-             pathex=['D:\\coding\\ImageStitch'],
+             pathex=['D:\\Coding_Test\\Python\\ImageStitch'],
              binaries=[],
              datas=[('icon','icon'),('config','config')],
              hiddenimports=[],
