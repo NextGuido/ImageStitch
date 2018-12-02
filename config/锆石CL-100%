@@ -1,0 +1,10 @@
+imgresize:True
+imgresize_x:1.000
+imgresize_y:1.000
+featureMethod:surf
+searchRatio:0.750
+offsetCaculate:众数
+offsetEvaluate:3
+direction:左向拼接
+method:全局
+fusion:无融合

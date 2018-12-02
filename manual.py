@@ -2,15 +2,30 @@ from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from functools import partial
+import cv2 as cv
+from PIL import Image
 from lib import *
 import operator
 import sys
+
 class GraphicsPixmapItem(QGraphicsPixmapItem):
 
     def __init__(self,pixmap):
         super(GraphicsPixmapItem, self).__init__(pixmap)
         self.setFlags(QGraphicsItem.ItemIsSelectable|
                       QGraphicsItem.ItemIsMovable)
+        self.prePos=self.pos()
+    # def setSelected(self, bool):
+    #     QGraphicsPixmapItem.setSelected(self,bool)
+    #     if bool==True:
+    #         self.prePos=self.pos()
+    #         print('selected pos',self.prePos)
+    # def mousePressEvent(self, ev):
+    #     QGraphicsPixmapItem.mousePressEvent(self,ev)
+    #     self.prePos=self.pos()
+    # def mouseMoveEvent(self, ev):
+    #     QGraphicsPixmapItem.mouseMoveEvent(self,ev)
+    #     print(int(ev.buttons()))
     def parentWidget(self):
         return self.scene().views()[0]
     def contextMenuEvent(self, event):
@@ -45,25 +60,37 @@ class GraphicsPixmapItem(QGraphicsPixmapItem):
             for i in list:
                 self.stackBefore(i)
         self.scene().update()
+        return
 
 class GraphicsView(QGraphicsView):
     def __init__(self):
         super(GraphicsView, self).__init__()
         self.setDragMode(QGraphicsView.RubberBandDrag)#视图选择
         self.setRenderHint(QPainter.Antialiasing)#反走样
-        self.setMouseTracking(True)
+        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)  # 视图仿射变换时，使用鼠标位置定位场景坐标eg使用鼠标位置作为缩放中心
+        # self.setMouseTracking(True)
+        # self.setRubberBandSelectionMode(Qt.ContainsItemShape)#rubberbandselect设置为包含模式
         self.zoom=1.0
+        self.itemsMoving=False
     def wheelEvent(self, ev):
+        mod=ev.modifiers()
         factor=ev.angleDelta().y()/120.0#一步15度，一度滑动8个单位距离
-        if factor>0:#放大
-            factor=2
-        elif self.zoom<0.01:
-            return
-        else:#缩小
-            factor=0.5
-        self.zoom = self.zoom * factor
-        # print(self.zoom)
-        self.scale(factor,factor)
+        if Qt.ControlModifier==int(mod):
+            # print(int(mod))
+            if factor>0:#放大
+                factor=2
+            elif self.zoom<0.01:
+                return
+            else:#缩小
+                factor=0.5
+            self.zoom = self.zoom * factor
+            self.scale(factor,factor)
+            pos = self.mapToScene(ev.pos())
+            item=self.scene().itemAt(pos, QTransform())
+            if item:
+                self.ensureVisible(item)
+        else:
+            super(GraphicsView, self).wheelEvent(ev)
     def keyPressEvent(self, ev):
         key=ev.key()
         items=self.scene().selectedItems()
@@ -83,9 +110,26 @@ class GraphicsView(QGraphicsView):
                     item.moveBy(0,1)
         else:
             QGraphicsView.keyPressEvent(self,ev)
-    def mouseMoveEvent(self, ev):
-        QGraphicsView.mouseMoveEvent(self,ev)
-        self.parentWidget().mouseMoveEvent(ev)
+    # def mouseMoveEvent(self, ev):
+    #     buttons=ev.buttons()
+    #     QGraphicsView.mouseMoveEvent(self,ev)
+    #     self.parentWidget().mouseMoveEvent(ev)
+    #     pos = self.mapToScene(ev.pos())
+    #     if buttons==Qt.LeftButton:#
+    #         if self.scene().items():
+    #             item = self.scene().itemAt(pos, QTransform())
+    #             if item and item.isSelected():
+    #                 # print('drag move')
+    #                 self.itemsMoving=True
+    #TODO
+    def mouseReleaseEvent(self, ev):
+        QGraphicsView.mouseReleaseEvent(self,ev)
+        if self.itemsMoving:
+            self.itemsMoving=False
+            items=self.scene().selectedItems()
+            # for item in items:
+                # print(item.pos())
+            # self.scene().clearSelection()
 
 class ManualForm(QMainWindow):
     def __init__(self,filepath=None):
@@ -94,6 +138,8 @@ class ManualForm(QMainWindow):
         self.filepath=filepath#记录文件路径
         self.suffix='.jpg'#默认图片后缀
         self.nextPoint=QPoint()#下一张图片的位置
+        self.undopoints=[]
+        # self.setMouseTracking(True)
         self.dirs={
             '0':[-1,0],#左
             '1':[1,0], #右
@@ -106,12 +152,12 @@ class ManualForm(QMainWindow):
         self.view.setScene(self.scene)
         #actions
         action=partial(newAction,self)#默认self为action的parent
-        new=action('New',self.newFile,icon='new',tip='打开新项目')
-        self.directionOps = QComboBox(self)
-        self.directionOps.addItems(['依次向左', '依次向右', '依次向上', '依次向下'])
+        # new=action('New',self.newFile,icon='new',tip='打开新项目')
+        # self.directionOps = QComboBox(self)
+        # self.directionOps.addItems(['依次向左', '依次向右', '依次向上', '依次向下'])
+        # directionMenu = newWidgetAction(self, self.directionOps)
         dirLabel=QLabel('默认新图片顺序：')
         dirLabel.setToolTip('新添加图片相对原始项目的方位')
-        directionMenu = newWidgetAction(self, self.directionOps)
         add=action('打开',self.addFile,icon='add',tip='添加图片')
         delete=action('删除',self.delete,'delete',icon='delete',tip='删除图片')
         upper = action('上移一层', self.layerUpper)
@@ -121,6 +167,7 @@ class ManualForm(QMainWindow):
         self.save = action('保存', self.saveFile, 'Ctrl+S', 'save', '保存项目')
         self.full = action("全屏", self.fullScreen, icon='fullScreen')
         self.normal = action('退出全屏', self.fullScreen, 'esc', icon='quit')
+        self.undo=action('撤销',self.undoaction,"Ctrl+Z")
         self.tools=self.toolbar('Tools',[add,None,delete,None,self.save,None,upper,None,lower,None,top,None,bottom,None,self.full])
         self.addToolBar(Qt.TopToolBarArea, self.tools)
         #layout
@@ -132,8 +179,8 @@ class ManualForm(QMainWindow):
         self.setCentralWidget(widget)
         self.resize(self.screenSize().width()/1.5,self.screenSize().height()/1.5)
         # signal-slot
-        self.directionOps.currentIndexChanged.connect(self.dirChanged)
-
+        # self.directionOps.currentIndexChanged.connect(self.dirChanged)
+        self.scene.changed.connect(self.conChange)
         self.setWindowTitle('材料显微图像拼接软件')
         self.setWindowIcon(newIcon('icon'))
     def dirChanged(self,s):
@@ -141,13 +188,20 @@ class ManualForm(QMainWindow):
     def screenSize(self):
         screen=QDesktopWidget().screenGeometry()
         return screen
-    def mouseMoveEvent(self, e):#如果items 发生拖动位置改变，dirty置为True
-        pos = self.view.mapToScene(e.pos())
-        if self.scene.items():
-            item=self.scene.itemAt(pos,QTransform())
-            if item and item.isSelected():
-                # print('drag move')
-                self.setDirty(True)
+    def conChange(self,change):#content改变，dirty置为True
+        # self.scene.clearSelection()
+        # self.setDirty(True)
+        pass
+    def undoaction(self):
+        pass
+    # def mouseMoveEvent(self, e):#同上，但是这个思路不太好用
+        # pos = self.view.mapToScene(e.pos())
+        # # print('move')
+        # if self.scene.items():
+        #     item=self.scene.itemAt(pos,QTransform())
+        #     if item and item.isSelected():
+        #         # print('drag move')
+        #         self.setDirty(True)
     def closeEvent(self,e):
         if not self.mayContinue():
             if not self.saveFile():
@@ -212,20 +266,21 @@ class ManualForm(QMainWindow):
         self.view.scale(scale,scale)
     def position(self,w,h,dx=0,dy=0):
         rect = self.scene.itemsBoundingRect()
-        x, y = rect.x()+1,rect.y()+1#所有items的原点，1px为消除rect的边框距离
+        print(rect)
+        x, y = rect.x(),rect.y()#0.5是边界值
         if dx==0 and dy==0:
             if operator.eq(self.dir,self.dirs['0']):#水平向左
-                self.nextPoint =QPoint(x-w,y)
+                self.nextPoint =QPointF(x-w+0.5,y+0.5)
             elif operator.eq(self.dir,self.dirs['1']):#水平向右
-                self.nextPoint=QPoint(x+rect.width(),y)
+                self.nextPoint=QPointF(x+rect.width()-0.5,y+0.5)
             elif operator.eq(self.dir,self.dirs['2']):#垂直向上
-                self.nextPoint = QPoint(x, y - h)
+                self.nextPoint = QPointF(x+0.5, y+0.5 - h)
             elif operator.eq(self.dir,self.dirs['3']):#垂直向下
-                self.nextPoint = QPoint(x, y + rect.height())
+                self.nextPoint = QPointF(x+0.5, y + rect.height()-0.5)
             else:
-                self.nextPoint=QPoint(x-w,y+rect.height())#left bottom
+                self.nextPoint=QPointF(x-w,y+rect.height())#left bottom
         else:
-           self.nextPoint+=QPoint(dx,dy)
+           self.nextPoint+=QPointF(dx,dy)
         print('item point', self.nextPoint)
         return self.nextPoint
     def newFile(self):
@@ -243,7 +298,7 @@ class ManualForm(QMainWindow):
     def addImages(self,images):
         #images[0]:(path,dx,dy)
         for image in images:
-            print(image)
+            # print(image)
             if isinstance(image,tuple):
                 imageData = self.loadImage(image[0])
                 dx=image[1]
@@ -379,22 +434,38 @@ class ManualForm(QMainWindow):
         if not filename:
             # print('no file to save ')
             return False
+        self.filepath = QFileInfo(filename).path() + '/'
         try:
+            print('save rect', self.scene.itemsBoundingRect(), self.scene.sceneRect())
             self.scene.setSceneRect(self.scene.itemsBoundingRect())  # 更新场景的矩形范围，保持和items的边界范围一致
-            #去除边框1px
-            w = self.scene.itemsBoundingRect().width()-1
-            h = self.scene.itemsBoundingRect().height()-1
-            # print('save rect',self.scene.itemsBoundingRect(), self.scene.sceneRect())
-            image = QImage(w, h, QImage.Format_ARGB32)
-            p = QPainter(image)
-            p.begin(image)
             self.scene.clearSelection()
-            self.scene.render(p)
-            p.end()
-            image.save(filename)
+            #去除边框1px
+            # x=self.scene.itemsBoundingRect().x()
+            # y=self.scene.itemsBoundingRect().y()
+            # w = self.scene.itemsBoundingRect().width()-1
+            # h = self.scene.itemsBoundingRect().height()-1
+            # image = QImage(w, h, QImage.Format_ARGB32)
+            # p = QPainter(image)
+            # p.begin(image)
+            # # p.setRenderHint(QPainter.HighQualityAntialiasing)
+            # # tmp_w=10000
+            # # sum=int(w/tmp_w)
+            # # i=0
+            # # while i<sum:
+            # #     self.scene.render(p,target=QRectF(i*tmp_w,0,tmp_w,h),source=QRectF(x+i*tmp_w,y,tmp_w,h))
+            # #     print(x+i*tmp_w)
+            # #     i+=1
+            # # self.scene.render(p,target=QRectF(sum*tmp_w,0,w-sum*tmp_w,h),source=QRectF(x+sum*tmp_w,y,w-sum*tmp_w,h))
+            # self.scene.render(p)
+            # p.end()
+            self.sthread = saveThread(self.scene,filename)
+            self.sthread.start()
+            # print(image.size())
+            # img.save(filename)
+            # image.save(filename)
             # self.view.setScene(self.scene)
             # print('save file ',self.scene.isActive(),self.scene.items())
-            self.setDirty(False)
+            # self.setDirty(False)
         except IOError as e:
             QMessageBox.warning(self, "Save Error",
                                 "Failed to save {0}: {1}".format(self.filename, e))

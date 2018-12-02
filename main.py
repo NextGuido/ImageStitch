@@ -1,3 +1,4 @@
+import stat
 import sys
 from PyQt5.QtCore import QThread,pyqtBoundSignal
 from PyQt5.QtWidgets import  *
@@ -9,11 +10,12 @@ from login import *
 from Stitcher import Stitcher
 import cv2
 import time
-import glob
+import globalvar as gl
 import os
 import numpy as np
 from manual import ManualForm
 from myconfig import *
+from functools import partial
 
 class Stitch(Stitcher):
     # 重写部分功能
@@ -118,33 +120,48 @@ class Stitch(Stitcher):
         thread.sig_r.emit(str4)
         return ((status, endfileIndex), stitchImage)
 
-    def imageSetStitchWithMutiple(self, imgresize, imgresize_x, imgresize_y, projectAddress, outputAddress, fileName,
+    def imageSetStitchWithMutiple(self, imgresize, imgresize_x, imgresize_y, projectAddress, files, outputAddress, fileName,
                        caculateOffsetMethod,startNum=1, fileExtension="jpg", outputfileExtension="jpg"):
         # 对图像拼接进行了较大改动，首先加入了图像缩放的变量和相应代码，然后修改部分代码使拼接功能由对多个文件夹
         # 进行拼接变为对单个目录下的图像进行拼接
-
-        if imgresize:
+        fileList = []
+        cachedir=gl.get_value('temp')+'/imageStitchimgResizecache/'
+        if imgresize:#图像缩放，暂存cache/目录
             # 以下代码为将图像进行缩放并放入cache目录下，将cache作为输入进行拼接
-            if not os.path.exists("./cache"):
-                os.makedirs("./cache")
-            for i in os.listdir("./cache"):
-                path_file = os.path.join("./cache", i)
+            if not os.path.exists(cachedir):
+                os.makedirs(cachedir)
+            for i in os.listdir(cachedir):
+                path_file = os.path.join(cachedir, i)
                 os.remove(path_file)
-            fileList = glob.glob(projectAddress + "\\" + "*." + fileExtension)
-            fileNum = len(fileList)
-            for j in range(0, fileNum):
-                Name = fileList[j].split("\\")[-1]
-                tmpfileExtension=Name.split('.')[-1]
-                #img = cv2.imread(fileList[j], 0)
-                img=cv2.imdecode(np.fromfile(fileList[j],dtype=np.uint8),cv2.IMREAD_GRAYSCALE)
+            for file in files:
+                fn=os.path.join(projectAddress,file)
+                tmpfileExtension = file.split('.')[-1]
+                # img = cv2.imread(fileList[j], 0)
+                img = cv2.imdecode(np.fromfile(fn, dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
                 imgResized = self.resize(img, imgresize_x, imgresize_y)
                 # cv2.imwrite("./cache/" + Name, imgResized)
-                cv2.imencode("." + tmpfileExtension, imgResized)[1].tofile("./cache/" + Name)
-            projectAddress = "./cache"
-        fileAddress = projectAddress + "/"
+                cv2.imencode("." + tmpfileExtension, imgResized)[1].tofile(cachedir + file)
+            projectAddress = cachedir
+            # fileList = glob.glob(projectAddress + "\\" + "*." + fileExtension)
+            # fileNum = len(fileList)
+            # for j in range(0, fileNum):
+            #     Name = fileList[j].split("\\")[-1]
+            #     tmpfileExtension=Name.split('.')[-1]
+            #     #img = cv2.imread(fileList[j], 0)
+            #     img=cv2.imdecode(np.fromfile(fileList[j],dtype=np.uint8),cv2.IMREAD_GRAYSCALE)
+            #     imgResized = self.resize(img, imgresize_x, imgresize_y)
+            #     # cv2.imwrite("./cache/" + Name, imgResized)
+            #     cv2.imencode("." + tmpfileExtension, imgResized)[1].tofile("./cache/" + Name)
+            # projectAddress = "./cache"
 
+         #流式拼接
+        # fileAddress = projectAddress + "/"
         # + str(i) + "/"
-        fileList = glob.glob(fileAddress + "*." + fileExtension)
+        # fileList = glob.glob(fileAddress + "*." + fileExtension)
+        for file in files:
+            fn = os.path.join(projectAddress, file)
+            print(fn)
+            fileList.append(fn)
         if not os.path.exists(outputAddress):
             os.makedirs(outputAddress)
         Stitcher.outputAddress = outputAddress
@@ -195,6 +212,8 @@ class stitcherThread(QThread):
         self.imgresize_x= msg['imgresize_x']
         self.imgresize_y = msg['imgresize_y']
         self.projectAddress = msg['projectAddress']
+        self.files=msg['files']
+        print(self.files)
         self.outputAddress = msg['outputAddress']
         self.fileName = msg['fileName']
         self.method = msg['method']
@@ -207,12 +226,12 @@ class stitcherThread(QThread):
 
         if self.method=="calculateOffsetForFeatureSearch":
             stitcher.imageSetStitchWithMutiple(self.imgresize, self.imgresize_x, self.imgresize_y,
-                                    self.projectAddress, self.outputAddress, self.fileName,
+                                    self.projectAddress, self.files, self.outputAddress, self.fileName,
                                     stitcher.calculateOffsetForFeatureSearch, startNum=1,
                                     fileExtension=self.fileExtension, outputfileExtension=self.outputfileExtension)
         elif self.method=="calculateOffsetForFeatureSearchIncre":
             stitcher.imageSetStitchWithMutiple(self.imgresize, self.imgresize_x, self.imgresize_y,
-                                    self.projectAddress, self.outputAddress, self.fileName,
+                                    self.projectAddress, self.files, self.outputAddress, self.fileName,
                                     stitcher.calculateOffsetForFeatureSearchIncre,startNum=1,
                                     fileExtension=self.fileExtension, outputfileExtension=self.outputfileExtension)
         self.sig_e.emit()
@@ -320,6 +339,8 @@ class MainWindow(QMainWindow,Ui_MainWindow ):
     manualForms=[]
     def __init__(self,parent=None ):
         super (MainWindow ,self ).__init__(parent )
+        self.files=[]
+        self.stitchParamsConf = myconfig()
         self .setupUi(self)
         # 设置界面控件参数，将控件和功能连接起来
         self.cbBox_mode.currentIndexChanged.connect(self.modeSet)
@@ -350,9 +371,11 @@ class MainWindow(QMainWindow,Ui_MainWindow ):
 
         self.bt_save.clicked.connect(self.saveMode)
         self.bt_del.clicked.connect(self.delMode)
+        self.list_input.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.list_input.customContextMenuRequested.connect(self.listInputMenu)
         self.list_input.itemClicked.connect(self.inputPic)
         self.list_input.setAlternatingRowColors(True)
-        self.lb_icon  .setPixmap(QPixmap ("./icon/icon.png").scaledToHeight(119))
+        self.lb_icon.setPixmap(QPixmap ("./icon/icon.png").scaledToHeight(119))
         self.start()
         self.setWindowIcon(QIcon('./icon/icon.png'))
 
@@ -368,13 +391,16 @@ class MainWindow(QMainWindow,Ui_MainWindow ):
         self.bt_startStitch.setEnabled(False)
         self.cbBox_mode.clear()
         self.cbBox_mode.addItem("默认")
-        if not os.path.exists("./config"):
-            os.makedirs("./config")
+        items=self.stitchParamsConf.getList()
+        for item in items:
+            self.cbBox_mode.addItem(item)
+        # if not os.path.exists("./config"):
+        #     os.makedirs("./config")
         # if not os.path.exists("./user.ini"):
         #     f=open("./user.ini","w")
         #     f.close()
-        for fn in os.listdir("./config/"):
-            self.cbBox_mode.addItem(fn)
+        # for fn in os.listdir("./config/"):
+        #     self.cbBox_mode.addItem(fn)
 
         self.modeSet()
     def manualAct(self):
@@ -418,7 +444,7 @@ class MainWindow(QMainWindow,Ui_MainWindow ):
     #             self.removePassword()
     def input(self):
         # 选择输入图像文件夹
-        self.fileNum=0
+        # self.fileNum=0
         dlg= QFileDialog()
         dlg.setFileMode(QFileDialog.Directory )
         self.projectAddress = dlg.getExistingDirectory()
@@ -434,7 +460,8 @@ class MainWindow(QMainWindow,Ui_MainWindow ):
             for fn in os.listdir(self.projectAddress):
                 if self.isImage(fn):
                     self.list_input .addItem(fn)
-                    self.fileNum+=1
+                    self.files.append(fn)
+                    # self.fileNum+=1
                     start=True
                     self.fileExtension=fn.split(".")[-1]
             self.bt_startStitch.setEnabled(start)
@@ -451,6 +478,20 @@ class MainWindow(QMainWindow,Ui_MainWindow ):
             return True
         else:
             return False
+    def  listInputMenu(self,p):
+        popMenu=QMenu()
+        item=self.list_input.itemAt(p)
+        in_del=QAction('delete',self)
+        popMenu.addAction(in_del)
+        in_del.triggered.connect(partial(self.inDel,item))
+        popMenu.exec_(QCursor.pos())
+    def inDel(self,item):
+        print(item.text())
+        self.files.remove(item.text())
+        print(self.files)
+        self.list_input.removeItemWidget(self.list_input.takeItem(self.list_input.row(item)))
+        # self.fileNum-=1
+        # print(self.fileNum)
     def inputPic(self,item):
         # 点击列表中文件名打开图像功能
         n=self.list_input.currentRow()
@@ -471,12 +512,15 @@ class MainWindow(QMainWindow,Ui_MainWindow ):
             self.fileName="result"
     def startStitch(self):
         # 开始拼接
-        newForm.setStart(self.fileNum)
+        fileNum=len(self.files)
+        newForm.setStart(fileNum)
+        # newForm.setStart(self.fileNum)
         msg={}
         msg['imgresize']=self.imgresize
         msg['imgresize_x']=self.imgresize_x
         msg['imgresize_y'] = self.imgresize_y
         msg['projectAddress']=self.projectAddress
+        msg['files']=self.files
         msg['outputAddress'] =self.outputAddress
         msg['fileName'] =self.fileName
         msg['method'] =self.method
@@ -501,7 +545,7 @@ class MainWindow(QMainWindow,Ui_MainWindow ):
     def modeSet(self):
         # 读取模式的配置文件并应用
         modeName=self.cbBox_mode.currentText()
-        con=myconfig()
+        con=self.stitchParamsConf
         mode={}
         if modeName=="默认":
             self.bt_editMode.setEnabled(False)
@@ -537,8 +581,7 @@ class MainWindow(QMainWindow,Ui_MainWindow ):
             mode['method']=self.cbBox_method.currentText()
             mode['fusion']=self.cbBox_fusion.currentText()
 
-            con=myconfig()
-            con.create(text,mode)
+            self.stitchParamsConf.create(text,mode)
             self.cbBox_mode.setCurrentText(text)
     def imgResize(self):
         # 设置图像是否缩放
@@ -640,17 +683,15 @@ class MainWindow(QMainWindow,Ui_MainWindow ):
         mode['direction'] = self.cbBox_direction.currentText()
         mode['method'] = self.cbBox_method.currentText()
         mode['fusion']=self.cbBox_fusion.currentText()
-        con = myconfig()
-        con.reset(text,mode)
+        self.stitchParamsConf.reset(text,mode)
 
     def  delMode(self):
         # 删除当前模式
         self.cbBox_mode.currentIndexChanged.disconnect(self.modeSet)
         self.groupBox_setting.setEnabled(False)
         text = self.cbBox_mode.currentText()
-        con=myconfig()
         self.cbBox_mode.setCurrentText("默认")
-        con.delFile(text)
+        self.stitchParamsConf.delFile(text)
         self.cbBox_mode.currentIndexChanged.connect(self.modeSet)
         self.modeSet()
         self.cbBox_mode.setEnabled(True)
