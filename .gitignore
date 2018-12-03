@@ -6,7 +6,5 @@ result/
 .cache/
 __pycache__/
 cache/
-resultevaluate.txt
 build/
-manualAct.py
-main.spec
+dist/
