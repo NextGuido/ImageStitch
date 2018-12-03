@@ -373,7 +373,7 @@ class MainWindow(QMainWindow,Ui_MainWindow ):
         self.bt_del.clicked.connect(self.delMode)
         self.list_input.setContextMenuPolicy(Qt.CustomContextMenu)
         self.list_input.customContextMenuRequested.connect(self.listInputMenu)
-        self.list_input.itemClicked.connect(self.inputPic)
+        self.list_input.itemDoubleClicked.connect(self.inputPic)
         self.list_input.setAlternatingRowColors(True)
         self.lb_icon.setPixmap(QPixmap ("./icon/icon.png").scaledToHeight(119))
         self.start()
@@ -481,7 +481,7 @@ class MainWindow(QMainWindow,Ui_MainWindow ):
     def  listInputMenu(self,p):
         popMenu=QMenu()
         item=self.list_input.itemAt(p)
-        in_del=QAction('delete',self)
+        in_del=QAction('删除',self)
         popMenu.addAction(in_del)
         in_del.triggered.connect(partial(self.inDel,item))
         popMenu.exec_(QCursor.pos())
